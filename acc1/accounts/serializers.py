@@ -35,6 +35,34 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['nickname', 'email']
+
+
+    def validate_email(self, value):
+        user = self.instance
+        # exclude : 특정 조건에 해당하는 객체를 제외하고 나머지 반환
+        if User.objects.exclude(pk=user.pk).filter(email=value).exists():
+            raise serializers.ValidationError("사용중인 이메일 입니다.")
+        return value
+    
+
+    def validate_nickname(self, value):
+        user = self.instance
+        if User.objects.exclude(pk=user.pk).filter(nickname=value).exists():
+            raise serializers.ValidationError("사용중인 닉네임 입니다.")
+        return value
+    
+
+    def update(self, instance, validated_data):
+        instance.email = validated_data.get('email', instance.email)
+        instance.nickname = validated_data.get('nickname', instance.nickname)
+        instance.save()
+        return instance
+
+
 class ChangePasswordSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

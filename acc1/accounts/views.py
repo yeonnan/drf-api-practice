@@ -1,11 +1,13 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from accounts.serializers import UserSerializer, ChangePasswordSerializer
+from accounts.serializers import UserSerializer, ProfileUpdateSerializer, ChangePasswordSerializer
 from accounts.models import User
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import check_password
+from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
 
 
 # 회원가입
@@ -36,11 +38,27 @@ class LogoutAPIView(APIView):
             return Response({'error' : '로그아웃에 실패하였습니다.'}, status=400)
 
 
+# 프로필 수정
+class ProfileUpdateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, pk):
+        user = get_object_or_404(get_user_model(), pk=pk)
+
+        if request.user.pk != user.pk:
+            return Response({'error' : '권한이 없습니다.'}, status=400)
+        
+        serializer = ProfileUpdateSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
 # 비밀번호 변경
 class ChangePasswordAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, pk):
+    def put(self, request, pk):
         old_password = request.data.get('old_password')
         new_password = request.data.get('new_password')
 
